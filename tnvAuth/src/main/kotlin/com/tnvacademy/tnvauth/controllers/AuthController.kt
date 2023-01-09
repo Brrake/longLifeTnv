@@ -88,6 +88,10 @@ class AuthController(
             val cookie = Cookie(cookieName, jwt)
 
             //Cookie security
+            cookie.secure = false
+            cookie.maxAge = 24 * 60 * 60;
+            cookie.path = "/";
+
             cookie.isHttpOnly = true
 
             //Aggiunta del cookie alla risposta
@@ -127,8 +131,9 @@ class AuthController(
     @PostMapping("logout")
     fun logout(response: HttpServletResponse): ResponseEntity<Any> {
         //Cancella jwt
-        val cookie = Cookie("jwt", "")
+        val cookie = Cookie(cookieName, "")
         cookie.maxAge = 0
+        cookie.path = "/"
 
         //Aggiungi cookie alla risposta
         response.addCookie(cookie)

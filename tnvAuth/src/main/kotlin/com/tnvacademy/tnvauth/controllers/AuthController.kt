@@ -11,7 +11,7 @@ import com.tnvacademy.tnvauth.services.UserService
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
-import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.core.env.Environment
 import org.springframework.http.ResponseEntity
@@ -67,7 +67,7 @@ class AuthController(
     }
 
     @PostMapping("login")
-    fun login(@RequestBody body: LoginDTO, response: HttpServletResponse): ResponseEntity<Any> {
+    fun login(@RequestBody body: LoginDTO,request: HttpServletRequest, response: HttpServletResponse): ResponseEntity<Any> {
         try {
             //Se l'utente esiste vai avanti
             val user = this.userService.findByEmail(body.email)
@@ -76,6 +76,9 @@ class AuthController(
             if (!user.comparePassword(body.password)) {
                 return ResponseEntity.badRequest().body(Message("Password errata!"))
             }
+
+             val ipAddress = getClientIp(request);
+            println(ipAddress)
 
             //Crea issuer per la creazione del jwt
             val issuer = user.id.toString()
@@ -119,14 +122,14 @@ class AuthController(
     }
 
     @GetMapping("user")
-    fun user(@CookieValue("jwt") jwt: String?): ResponseEntity<Any> {
+    fun user(@RequestHeader("x-access-token") jwt: String): ResponseEntity<Any> {
         try {
             //Se il jwt è valido vai avanti
             if (jwt == null) {
                 return ResponseEntity.status(401).body(Message("Non autenticato!"))
             }
             //Decrypta jwt - classi deprecate
-            val body = Jwts.parser().setSigningKey(getSigningKey()).parseClaimsJws(jwt).body
+            val body = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(jwt).body
             //Estrai info utente
             val user = this.userService.getById(body.issuer.toInt())
 
@@ -142,15 +145,28 @@ class AuthController(
     @PostMapping("logout")
     fun logout(response: HttpServletResponse): ResponseEntity<Any> {
         //Cancella jwt
+        /*
         val cookie = Cookie(cookieName, "")
         cookie.maxAge = 0
         cookie.path = "/"
 
         //Aggiungi cookie alla risposta
         response.addCookie(cookie)
+        */
 
         return ResponseEntity.ok(Message("Logout effettuato"))
     }
+    private fun getClientIp(request: HttpServletRequest?): String? {
+        var remoteAddr: String? = ""
+        if (request != null) {
+            remoteAddr = request.getHeader("X-FORWARDED-FOR")
+            if (remoteAddr == null || "" == remoteAddr) {
+                remoteAddr = request.remoteAddr
+            }
+        }
+        return remoteAddr
+    }
+
     fun checkRolesTable(){
         //Cerca i ruoli presenti nel database
         val roles = this.rolesRepository.findAll()

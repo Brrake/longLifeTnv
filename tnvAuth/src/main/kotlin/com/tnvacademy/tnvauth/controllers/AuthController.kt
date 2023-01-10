@@ -78,7 +78,6 @@ class AuthController(
             }
 
              val ipAddress = getClientIp(request);
-            println(ipAddress)
 
             //Crea issuer per la creazione del jwt
             val issuer = user.id.toString()

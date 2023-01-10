@@ -3,6 +3,7 @@ package com.tnvacademy.tnvauth.controllers
 import com.tnvacademy.tnvauth.dtos.LoginDTO
 import com.tnvacademy.tnvauth.dtos.Message
 import com.tnvacademy.tnvauth.dtos.RegisterDTO
+import com.tnvacademy.tnvauth.models.LoginReturn
 import com.tnvacademy.tnvauth.models.Role
 import com.tnvacademy.tnvauth.models.User
 import com.tnvacademy.tnvauth.repositories.RolesRepository
@@ -85,6 +86,9 @@ class AuthController(
                 .signWith(getSigningKey()).compact()
 
             //Creazione del cookie con nome 'cookieName' e valore di 'jwt'
+            /*
+            IPOTESI COOKIE
+
             val cookie = Cookie(cookieName, jwt)
 
             //Cookie security
@@ -96,8 +100,15 @@ class AuthController(
 
             //Aggiunta del cookie alla risposta
             response.addCookie(cookie)
+            */
 
-            return ResponseEntity.ok(Message("Login effettuato"))
+            //Creazione della risposta con le credenziali da intercettare
+            val logReturn = LoginReturn()
+            logReturn.message = "Login effettuato"
+            logReturn.token = jwt
+
+
+            return ResponseEntity.ok(logReturn)
         }catch (err:Error){
             return ResponseEntity.status(401).body(Message("Errore nel login"))
         }

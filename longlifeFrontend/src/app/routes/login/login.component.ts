@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../node-jwt/_services/auth.service';
+import { TokenStorageService } from '../../node-jwt/_services/token-storage.service';
 
 @Component({
   selector: 'app-login',
@@ -7,7 +8,7 @@ import { AuthService } from '../../node-jwt/_services/auth.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
-  constructor(private loginService: AuthService){}
+  constructor(private loginService: AuthService,private tokenService: TokenStorageService){}
 
   form: any = {};
 
@@ -15,10 +16,10 @@ export class LoginComponent implements OnInit {
   }
 
   login(){
-    console.log(this.form)
     this.loginService.login(this.form).subscribe(
       (result: any) => {
         console.log(result)
+        this.tokenService.saveUser(result)
       }
     )
   }
@@ -30,10 +31,6 @@ export class LoginComponent implements OnInit {
     )
   }
   logout() {
-    this.loginService.logout().subscribe(
-      (result: any) => {
-        console.log(result)
-      }
-    )
+    this.tokenService.signOut()
   }
 }

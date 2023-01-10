@@ -26,8 +26,8 @@ export class TokenStorageService {
   public getToken(): string {
     if (this.cookieService.get(USER_KEY)) {
       var myValue = JSON.parse(this.decryptData(this.cookieService.get(USER_KEY)));
-      if (myValue.accessToken) {
-        return myValue.accessToken;
+      if (myValue.token) {
+        return myValue.token;
       } else {
         return '';
       }

@@ -12,10 +12,21 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private token: TokenStorageService, private tokenExtractorService: HttpXsrfTokenExtractor) { }
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     let authReq = req;
+    const accessToken = this.token.getToken();
     const csrf = this.tokenExtractorService.getToken()
 
     /* N.B  Il jwt non viene intercettato perche viene salvato direttamente su un cookie */
-
+    if (accessToken != null && accessToken != '') {
+      if(csrf != null && csrf != ''){
+        authReq = authReq.clone({ headers: req.headers.set(XSRF_HEADER_KEY, csrf).set(TOKEN_HEADER_KEY, accessToken) });
+      }else{
+        authReq = authReq.clone({ headers: req.headers.set(TOKEN_HEADER_KEY, accessToken) });
+      }
+    }else{
+      if(csrf != null && csrf != ''){
+        authReq = authReq.clone({ headers: req.headers.set(XSRF_HEADER_KEY, csrf) });
+      }
+    }
     if (csrf != null && csrf != '') {
       authReq = authReq.clone({ headers: req.headers.set(XSRF_HEADER_KEY, csrf) });
     }

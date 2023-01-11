@@ -1,4 +1,4 @@
-# Long Live TNV
+# Long Life TNV
 
 longlifeFrontend : Frontend implementato con Angualar
 tnvAuth : Backend di autenticazione utilizzando Kotlin

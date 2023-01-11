@@ -84,7 +84,7 @@ class AuthController(
             //Creazione jwt con una scadenza data da 'expTime' e il secret dato da 'secret'
             val jwt = Jwts.builder()
                 .setIssuer(issuer)
-                .setExpiration(Date(System.currentTimeMillis() +60 * expTimeInMinutes!! * 1000)) // 1 day
+                .setExpiration(Date(System.currentTimeMillis() +60 * expTimeInMinutes!! * 1000)) // 30 minutes
                 .signWith(getSigningKey()).compact()
 
             //Creazione del cookie con nome 'cookieName' e valore di 'jwt'

@@ -105,12 +105,7 @@ class AuthController(
             */
 
             //Creazione della risposta con le credenziali da intercettare
-            val logReturn = LoginReturn()
-            logReturn.message = "Login effettuato"
-            logReturn.token = jwt
-
-
-            return ResponseEntity.ok(logReturn)
+            return ResponseEntity.ok(LoginReturn(jwt,user.name,user.email, user.roles))
         }catch (err:Error){
             return ResponseEntity.status(401).body(Message("Errore nel login"))
         }
@@ -120,6 +115,7 @@ class AuthController(
         return Keys.hmacShaKeyFor(keyBytes)
     }
 
+    /*
     @GetMapping("user")
     fun user(@RequestHeader("x-access-token") jwt: String): ResponseEntity<Any> {
         try {
@@ -155,6 +151,7 @@ class AuthController(
 
         return ResponseEntity.ok(Message("Logout effettuato"))
     }
+    */
     private fun getClientIp(request: HttpServletRequest?): String? {
         var remoteAddr: String? = ""
         if (request != null) {

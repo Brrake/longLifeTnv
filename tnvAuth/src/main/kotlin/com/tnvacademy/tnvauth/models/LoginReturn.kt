@@ -1,6 +1,5 @@
 package com.tnvacademy.tnvauth.models
 
-class LoginReturn {
-    var message = ""
-    var token = ""
+class LoginReturn(val token: String, val name: String, val email: String, val roles: List<Any>) {
+
 }

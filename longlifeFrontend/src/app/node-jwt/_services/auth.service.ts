@@ -22,18 +22,18 @@ const httpOptions = {
 })
 export class AuthService {
   constructor(private http: HttpClient) { }
-  //RESET PASSWORD - Verify if username match with email
-  //GET_USERS
-  getUsers(){
-    return this.http.get(LOCAL + 'user', httpOptions);
-  }
-  login(credentials: VerifyLoginInfo): Observable<any> {
+  login(credentials: any): Observable<any> {
     return this.http.post(LOCAL + 'login', credentials, httpOptions);
   }
-  register(info: SignUpInfo): Observable<any> {
+  register(info: any): Observable<any> {
     return this.http.post(LOCAL + 'register', info, httpOptions);
   }
+  /*
   logout(): Observable<any> {
     return this.http.post(LOCAL + 'logout', httpOptions);
   }
+  getUsers(){
+    return this.http.get(LOCAL + 'user', httpOptions);
+  }
+  */
 }

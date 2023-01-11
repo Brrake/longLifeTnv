@@ -4,35 +4,49 @@ import * as CryptoJS from 'crypto-js';
 import { CookieService } from 'ngx-cookie-service';
 
 const USER_KEY = '67fhdje883n4njk'
+const JWT_KEY = 'JWT'
 
 @Injectable({
   providedIn: 'root'
 })
 export class TokenStorageService {
 
-  public role: string | null;
 
   constructor(private cookieService: CookieService) {
-    this.role = localStorage.getItem('role');
   }
   signOut() {
-    this.deleteCookie(USER_KEY)
+    sessionStorage.clear();
+    localStorage.clear();
   }
   public saveUser(user: any) {
-    user.logged = true
-    var myValue = this.encryptData(JSON.stringify(user)) || ''
-    this.setCookie(USER_KEY, myValue)
+    sessionStorage.setItem(USER_KEY,this.encryptData(JSON.stringify(user)))
   }
-  public getToken(): string {
-    if (this.cookieService.get(USER_KEY)) {
-      var myValue = JSON.parse(this.decryptData(this.cookieService.get(USER_KEY)));
-      if (myValue.token) {
-        return myValue.token;
-      } else {
-        return '';
+  public getUser() {
+    if (sessionStorage.getItem(USER_KEY)) {
+      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
+      if(myUser != null && myUser != undefined){
+        return myUser
       }
-    } else {
-      return ''
+    }else{
+      var err = {
+        message: "Nessun utente trovato",
+        err:true
+      }
+      return err
+    }
+  }
+  public getToken() {
+    if (sessionStorage.getItem(USER_KEY)) {
+      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
+      if(myUser != null && myUser != undefined){
+        return myUser.token
+      }
+    }else{
+      var err = {
+        message: "Nessun utente trovato",
+        err:true
+      }
+      return err
     }
   }
   public getUsername() {

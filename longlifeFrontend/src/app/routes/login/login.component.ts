@@ -8,27 +8,33 @@ import { TokenStorageService } from '../../node-jwt/_services/token-storage.serv
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
-  constructor(private loginService: AuthService,private tokenService: TokenStorageService){}
+  constructor(private loginService: AuthService, private tokenService: TokenStorageService) { }
 
   form: any = {};
 
   ngOnInit() {
   }
 
-  login(){
+  login() {
     this.loginService.login(this.form).subscribe(
-      (result: any) => {
-        console.log(result)
-        this.tokenService.saveUser(result)
+      {
+        next: ((value: any) => {
+          this.tokenService.saveUser(value)
+        }
+        ),
+        error: ((error: any) => {
+          console.log(error)
+        }
+        ),
+        complete:
+          (() => {
+            window.location.reload()
+          })
       }
     )
   }
   getUser() {
-    this.loginService.getUsers().subscribe(
-      (result: any) => {
-        console.log(result)
-      }
-    )
+    console.log(this.tokenService.getUser())
   }
   logout() {
     this.tokenService.signOut()

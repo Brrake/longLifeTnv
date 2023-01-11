@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../node-jwt/_services/auth.service';
 import { TokenStorageService } from '../../node-jwt/_services/token-storage.service';
+import { AuthLoginReturn, AuthLoginInfo } from '../../node-jwt/_models/login-info';
 
 @Component({
   selector: 'app-login',
@@ -10,15 +11,17 @@ import { TokenStorageService } from '../../node-jwt/_services/token-storage.serv
 export class LoginComponent implements OnInit {
   constructor(private loginService: AuthService, private tokenService: TokenStorageService) { }
 
-  form: any = {};
+  form: AuthLoginInfo = { email: "", password: "" };
 
   ngOnInit() {
   }
 
+  //Esegui login
   login() {
     this.loginService.login(this.form).subscribe(
       {
-        next: ((value: any) => {
+        next: ((value: AuthLoginReturn) => {
+          //Salva utente nello storage
           this.tokenService.saveUser(value)
         }
         ),
@@ -28,14 +31,17 @@ export class LoginComponent implements OnInit {
         ),
         complete:
           (() => {
+            //Ricarica la pagina
             window.location.reload()
           })
       }
     )
   }
+  //Trova utente corrente
   getUser() {
     console.log(this.tokenService.getUser())
   }
+  //Esegui logout
   logout() {
     this.tokenService.signOut()
   }

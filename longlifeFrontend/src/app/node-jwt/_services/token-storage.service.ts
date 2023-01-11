@@ -2,76 +2,81 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment.prod';
 import * as CryptoJS from 'crypto-js';
 import { CookieService } from 'ngx-cookie-service';
+import { AuthLoginReturn } from '../_models/login-info';
+import { ErrorInfo } from '../_models/error-info';
 
-const USER_KEY = '67fhdje883n4njk'
-const JWT_KEY = 'JWT'
+const USER_KEY = 'USER'
 
 @Injectable({
   providedIn: 'root'
 })
 export class TokenStorageService {
-
-
-  constructor(private cookieService: CookieService) {
+  //Errore personalizzato
+  err:ErrorInfo = {
+    message: "Nessun utente trovato",
+    success: true
   }
+
+  constructor() { }
+
+  //Logout dall'applicazione
   signOut() {
+    //Cancella tutti i dati salvati nello storage
     sessionStorage.clear();
     localStorage.clear();
   }
-  public saveUser(user: any) {
-    sessionStorage.setItem(USER_KEY,this.encryptData(JSON.stringify(user)))
+  //Salva utente nello storage
+  saveUser(user: AuthLoginReturn) {
+    //Aggiungi l'utente nello storage con key USER_KEY e come valore l'utente in ingresso convertito in JSON string cryptato
+    sessionStorage.setItem(USER_KEY, this.encryptData(JSON.stringify(user)))
   }
-  public getUser() {
+  //Ottieni utente corrente
+  getUser(): AuthLoginReturn | ErrorInfo {
+    //Se nello storage è salvato qualche utente
     if (sessionStorage.getItem(USER_KEY)) {
-      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
-      if(myUser != null && myUser != undefined){
+      //Assegna a myUser la JSON string decriptata converita in Object
+      var myUser: AuthLoginReturn = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
+      if (myUser != null && myUser != undefined) {
         return myUser
-      }
-    }else{
-      var err = {
-        message: "Nessun utente trovato",
-        err:true
-      }
-      return err
-    }
-  }
-  public getToken() {
-    if (sessionStorage.getItem(USER_KEY)) {
-      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
-      if(myUser != null && myUser != undefined){
-        return myUser.token
-      }
-    }else{
-      var err = {
-        message: "Nessun utente trovato",
-        err:true
-      }
-      return err
-    }
-  }
-  public getUsername() {
-    var myValue = JSON.parse(this.decryptData(this.cookieService.get(USER_KEY)));
-    return myValue.username;
-  }
-  public getRoles() {
-    var myValue = JSON.parse(this.decryptData(this.cookieService.get(USER_KEY))).roles;
-    return myValue;
-  }
-  public getLoggedIn() {
-    if (this.cookieService.get(USER_KEY)) {
-      var myValue = JSON.parse(this.decryptData(this.cookieService.get(USER_KEY)));
-      if (myValue.logged) {
-        return myValue.logged;
       } else {
-        return false;
+        return this.err
+      }
+    } else {
+      return this.err
+    }
+  }
+  //Ottieni token
+  getToken():String|ErrorInfo {
+    //Se nello storage è salvato qualche utente
+    if (sessionStorage.getItem(USER_KEY)) {
+      //Assegna a myUser la JSON string decriptata converita in Object
+      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
+      if (myUser != null && myUser != undefined) {
+        return myUser.token
+      } else {
+        return this.err
+      }
+    } else {
+      return this.err
+    }
+  }
+  getLoggedIn(): boolean {
+    //Se nello storage è salvato qualche utente
+    if (sessionStorage.getItem(USER_KEY)) {
+      //Assegna a myUser la JSON string decriptata converita in Object
+      var myUser = JSON.parse(this.decryptData(sessionStorage.getItem(USER_KEY)));
+      if (myUser.token != null && myUser.token != undefined) {
+        return true
+      } else {
+        return false
       }
     } else {
       return false
     }
   }
 
-  private encryptData(data: any) {
-
+  // Crypto Functions
+  encryptData(data: any) {
     try {
       return CryptoJS.AES.encrypt(JSON.stringify(data), environment.SESS_SECRET).toString();
     } catch (e) {
@@ -89,11 +94,5 @@ export class TokenStorageService {
     } catch (e) {
       console.log(e);
     }
-  }
-  setCookie(name: string, value: string) {
-    this.cookieService.set(name, value);
-  }
-  deleteCookie(name: string) {
-    this.cookieService.delete(name);
   }
 }

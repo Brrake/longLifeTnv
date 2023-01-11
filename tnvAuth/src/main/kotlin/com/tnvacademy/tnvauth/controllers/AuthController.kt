@@ -28,7 +28,7 @@ class AuthController(
     env: Environment
 ) {
     //Scadenza token
-    val expTime = 60 * 24 * 1000
+    val expTimeInMinutes = env.getProperty("jwt.expInMinutes")?.toInt()
     //Secret di cryptaggio
     val secret = env.getProperty("jwt.secret")
     //Nome del cookie
@@ -84,7 +84,7 @@ class AuthController(
             //Creazione jwt con una scadenza data da 'expTime' e il secret dato da 'secret'
             val jwt = Jwts.builder()
                 .setIssuer(issuer)
-                .setExpiration(Date(System.currentTimeMillis() + expTime)) // 1 day
+                .setExpiration(Date(System.currentTimeMillis() +60 * expTimeInMinutes!! * 1000)) // 1 day
                 .signWith(getSigningKey()).compact()
 
             //Creazione del cookie con nome 'cookieName' e valore di 'jwt'

@@ -8,6 +8,7 @@ import com.tnvacademy.tnvauth.models.Role
 import com.tnvacademy.tnvauth.models.User
 import com.tnvacademy.tnvauth.repositories.RolesRepository
 import com.tnvacademy.tnvauth.services.UserService
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
@@ -25,7 +26,7 @@ import java.util.*
 class AuthController(
     private val userService: UserService,
     private val rolesRepository: RolesRepository,
-    env: Environment
+    private val env: Environment,
 ) {
     //Scadenza token
     val expTimeInMinutes = env.getProperty("jwt.expInMinutes")?.toInt()
@@ -50,10 +51,41 @@ class AuthController(
 
     //Registra un utente
     @PostMapping("register")
-    fun register(@RequestBody body: RegisterDTO): ResponseEntity<Any> {
+    fun register(@RequestBody body: RegisterDTO,request: HttpServletRequest):ResponseEntity<Any> {
+
+        try {
+            //Prendi il mio token dagli header della richiesta
+            val myToken = request.getHeader("x-access-token")
+            //Se il token è null o vuoto
+            if(myToken == null || myToken == ""){
+                return ResponseEntity.badRequest().body(Message("Non sei registrato!"))
+            }
+            //Assegna a decJwt il jwt decodificato
+            val decJwt = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(myToken)
+            //Estrai l'id dell'utente
+            val myID = decJwt.body.issuer.toInt()
+            //Cerca l'utente nel database
+            val user = this.userService.getById(myID)
+                ?: return ResponseEntity.badRequest().body(Message("Utente non trovato!"))
+            //Flag di controllo
+            var isAdmin = false
+            //Cicla nei ruoli dell'utente
+            user.roles.forEach {
+                //Se l'utente ha il ruolo di Amministratore modifica il flag di controllo
+                if(it.name == env.getProperty("role.admin").toString()){
+                    isAdmin = true
+                }
+            }
+            //Se non è admin allora non può registrare l'utente
+            if(!isAdmin){
+                return ResponseEntity.badRequest().body(Message("Non sei un docente!"))
+            }
+        } catch (e: JwtException) {
+            return ResponseEntity.badRequest().body(Message("Errore nel jwt!"))
+        }
 
         //Salva utente nel db con una lista di ruoli ruolo di utente
-        val myRolesList = listOf(Role(3,"USER"))
+        val myRolesList = listOf(Role(3,env.getProperty("role.user").toString()))
         return try {
             //Eseguire controlli sui parametri ricevuti
 
@@ -86,10 +118,9 @@ class AuthController(
                 .setIssuer(issuer)
                 .setExpiration(Date(System.currentTimeMillis() +60 * expTimeInMinutes!! * 1000)) // 30 minutes
                 .signWith(getSigningKey()).compact()
-
-            //Creazione del cookie con nome 'cookieName' e valore di 'jwt'
             /*
-            IPOTESI COOKIE
+            //Creazione del cookie con nome 'cookieName' e valore di 'jwt'
+            /          IPOTESI COOKIE
 
             val cookie = Cookie(cookieName, jwt)
 
@@ -97,113 +128,110 @@ class AuthController(
             cookie.secure = false
             cookie.maxAge = 24 * 60 * 60;
             cookie.path = "/";
-
             cookie.isHttpOnly = true
-
             //Aggiunta del cookie alla risposta
             response.addCookie(cookie)
             */
 
-            //Creazione della risposta con le credenziali da intercettare
-            return ResponseEntity.ok(LoginReturn(jwt,user.name,user.email, user.roles))
-        }catch (err:Error){
-            return ResponseEntity.status(401).body(Message("Errore nel login"))
-        }
-    }
-    private fun getSigningKey(): Key {
-        val keyBytes = Decoders.BASE64.decode(secret)
-        return Keys.hmacShaKeyFor(keyBytes)
-    }
+           //Creazione della risposta con le credenziali da intercettare
+           return ResponseEntity.ok(LoginReturn(jwt,user.name,user.email, user.roles))
+       }catch (err:Error){
+           return ResponseEntity.status(401).body(Message("Errore nel login"))
+       }
+   }
+   private fun getSigningKey(): Key {
+       val keyBytes = Decoders.BASE64.decode(secret)
+       return Keys.hmacShaKeyFor(keyBytes)
+   }
 
-    /*
-    @GetMapping("user")
-    fun user(@RequestHeader("x-access-token") jwt: String): ResponseEntity<Any> {
-        try {
-            //Se il jwt è valido vai avanti
-            if (jwt == null) {
-                return ResponseEntity.status(401).body(Message("Non autenticato!"))
-            }
-            //Decrypta jwt - classi deprecate
-            val body = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(jwt).body
-            //Estrai info utente
-            val user = this.userService.getById(body.issuer.toInt())
+   /*
+   @GetMapping("user")
+   fun user(@RequestHeader("x-access-token") jwt: String): ResponseEntity<Any> {
+       try {
+           //Se il jwt è valido vai avanti
+           if (jwt == null) {
+               return ResponseEntity.status(401).body(Message("Non autenticato!"))
+           }
+           //Decrypta jwt - classi deprecate
+           val body = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(jwt).body
+           //Estrai info utente
+           val user = this.userService.getById(body.issuer.toInt())
 
-            //Crea nuovo utente e salva ruolo
-            val newUser = this.createUser(user, user.roles)
+           //Crea nuovo utente e salva ruolo
+           val newUser = this.createUser(user, user.roles)
 
-            return ResponseEntity.ok(newUser)
-        } catch (e: Exception) {
-            return ResponseEntity.status(401).body(Message("Non autenticato!"))
-        }
-    }
+           return ResponseEntity.ok(newUser)
+       } catch (e: Exception) {
+           return ResponseEntity.status(401).body(Message("Non autenticato!"))
+       }
+   }
 
-    @PostMapping("logout")
-    fun logout(response: HttpServletResponse): ResponseEntity<Any> {
-        //Cancella jwt
-        /*
-        val cookie = Cookie(cookieName, "")
-        cookie.maxAge = 0
-        cookie.path = "/"
+   @PostMapping("logout")
+   fun logout(response: HttpServletResponse): ResponseEntity<Any> {
+       //Cancella jwt
+       /*
+       val cookie = Cookie(cookieName, "")
+       cookie.maxAge = 0
+       cookie.path = "/"
 
-        //Aggiungi cookie alla risposta
-        response.addCookie(cookie)
-        */
+       //Aggiungi cookie alla risposta
+       response.addCookie(cookie)
+       */
 
-        return ResponseEntity.ok(Message("Logout effettuato"))
-    }
-    */
-    private fun getClientIp(request: HttpServletRequest?): String? {
-        var remoteAddr: String? = ""
-        if (request != null) {
-            remoteAddr = request.getHeader("X-FORWARDED-FOR")
-            if (remoteAddr == null || "" == remoteAddr) {
-                remoteAddr = request.remoteAddr
-            }
-        }
-        return remoteAddr
-    }
+       return ResponseEntity.ok(Message("Logout effettuato"))
+   }
+   */
+   private fun getClientIp(request: HttpServletRequest?): String? {
+       var remoteAddr: String? = ""
+       if (request != null) {
+           remoteAddr = request.getHeader("X-FORWARDED-FOR")
+           if (remoteAddr == null || "" == remoteAddr) {
+               remoteAddr = request.remoteAddr
+           }
+       }
+       return remoteAddr
+   }
+   fun checkRolesTable(){
+       //Cerca i ruoli presenti nel database
+       val roles = this.rolesRepository.findAll()
+       //Se non ci sono ruoli allora inserisci quelli di default
+       if(roles.size == 0){
+           this.createRoles(rolesToAdd)
+       }else{
+           //Flag di controllo per verificare se esistono già dei ruoli
+           var existRole = false
+           //Cicla intorno ai ruoli da aggiungere
+           rolesToAdd.forEach{role->
+               //Cicla intorno ai ruoli del DB
+               roles.forEach{
+                   //Se il ruolo da controllare è presente nel DB allora 'existRole' = true e questo ruolo non verrà aggiunto
+                   if(it.name == role.name) {
+                       existRole=true
+                   }
+               }
+               //Se il ruolo non esiste allora aggiungilo al DB
+               if(!existRole){
+                   val newList = listOf(Role(role.name))
+                   this.createRoles(newList)
+               }else{
+                   //Se il ruolo esiste allora vai avanti con il ciclo e resetta lo stato del flag
+                   existRole=false
+               }
+           }
 
-    fun checkRolesTable(){
-        //Cerca i ruoli presenti nel database
-        val roles = this.rolesRepository.findAll()
-        //Se non ci sono ruoli allora inserisci quelli di default
-        if(roles.size == 0){
-            this.createRoles(rolesToAdd)
-        }else{
-            //Flag di controllo per verificare se esistono già dei ruoli
-            var existRole = false
-            //Cicla intorno ai ruoli da aggiungere
-            rolesToAdd.forEach{role->
-                //Cicla intorno ai ruoli del DB
-                roles.forEach{
-                    //Se il ruolo da controllare è presente nel DB allora 'existRole' = true e questo ruolo non verrà aggiunto
-                    if(it.name == role.name) {
-                        existRole=true
-                    }
-                }
-                //Se il ruolo non esiste allora aggiungilo al DB
-                if(!existRole){
-                    val newList = listOf(Role(role.name))
-                    this.createRoles(newList)
-                }else{
-                    //Se il ruolo esiste allora vai avanti con il ciclo e resetta lo stato del flag
-                    existRole=false
-                }
-            }
-
-        }
-    }
-    fun createRoles(roles:List<Role>){
-        roles.forEach {
-            this.rolesRepository.save(it)
-        }
-    }
-    fun createUser(user:User,myRoles:List<Role>):User{
-        //Crea utente basato su quello esistente
-        return User(user.id,user.name,user.email,listOf(Role(myRoles[0].id,myRoles[0].name)),user.password)
-    }
-    fun createUser(user:RegisterDTO,myRoles:List<Role>):User{
-        //Crea nuovo utente e salva ruolo
-        return User(user.name,user.email,listOf(Role(myRoles[0].id,myRoles[0].name)),user.password)
-    }
+       }
+   }
+   fun createRoles(roles:List<Role>){
+       roles.forEach {
+           this.rolesRepository.save(it)
+       }
+   }
+   fun createUser(user:User,myRoles:List<Role>):User{
+       //Crea utente basato su quello esistente
+       return User(user.id,user.name,user.email,listOf(Role(myRoles[0].id,myRoles[0].name)),user.password)
+   }
+   fun createUser(user:RegisterDTO,myRoles:List<Role>):User{
+       //Crea nuovo utente e salva ruolo
+       return User(user.name,user.email,listOf(Role(myRoles[0].id,myRoles[0].name)),user.password)
+   }
 }

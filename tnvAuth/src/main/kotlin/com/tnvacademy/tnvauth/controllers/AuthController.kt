@@ -56,9 +56,10 @@ class AuthController(
         try {
             //Prendi il mio token dagli header della richiesta
             val myToken = request.getHeader("x-access-token")
+                ?:return ResponseEntity.badRequest().body(Message("Token non valido!"))
             //Se il token è null o vuoto
-            if(myToken == null || myToken == ""){
-                return ResponseEntity.badRequest().body(Message("Non sei registrato!"))
+            if(myToken == ""){
+                return ResponseEntity.badRequest().body(Message("Token non valido!"))
             }
             //Assegna a decJwt il jwt decodificato
             val decJwt = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(myToken)
@@ -81,7 +82,7 @@ class AuthController(
                 return ResponseEntity.badRequest().body(Message("Non sei un docente!"))
             }
         } catch (e: JwtException) {
-            return ResponseEntity.badRequest().body(Message("Errore nel jwt!"))
+            return ResponseEntity.badRequest().body(Message("Jwt scaduto o non valido!"))
         }
 
         //Salva utente nel db con una lista di ruoli ruolo di utente
